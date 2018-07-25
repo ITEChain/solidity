@@ -89,26 +89,25 @@ void SMTPortfolio::addAssertion(Expression const& _expr)
 
 pair<CheckResult, vector<string>> SMTPortfolio::check(vector<Expression> const& _expressionsToEvaluate)
 {
-	CheckResult lastResult = CheckResult::UNKNOWN;
+	CheckResult lastResult = CheckResult::ERROR;
 	vector<string> finalValues;
 	for (auto s : m_solvers)
 	{
 		CheckResult result;
 		vector<string> values;
 		tie(result, values) = s->check(_expressionsToEvaluate);
-		if (result <= CheckResult::UNSATISFIABLE)
+		if (result == CheckResult::UNKNOWN)
 		{
-			// result is SAT or UNSAT for the first time,
-			// so we use these results.
-			// If solver said UNKNOWN or ERROR we discard it.
-			if (lastResult == CheckResult::UNKNOWN)
+			if (lastResult == CheckResult::ERROR)
+				lastResult = result;
+		}
+		else
+		{
+			if (lastResult >= CheckResult::UNKNOWN)
 			{
 				lastResult = result;
 				finalValues = std::move(values);
 			}
-			// At this point we're sure that a solver answered
-			// SAT whereas another answered UNSAT, since
-			// lastResult can never be ERROR.
 			else if (lastResult != result)
 			{
 				lastResult = CheckResult::CONFLICTING;
