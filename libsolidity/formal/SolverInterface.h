@@ -200,7 +200,7 @@ public:
 	virtual void pop() = 0;
 
 	virtual void declareFunction(std::string _name, Sort _domain, Sort _codomain) = 0;
-	virtual Expression newFunction(std::string _name, Sort _domain, Sort _codomain)
+	Expression newFunction(std::string _name, Sort _domain, Sort _codomain)
 	{
 		declareFunction(_name, _domain, _codomain);
 		solAssert(_domain == Sort::Int, "Function sort not supported.");
@@ -217,14 +217,14 @@ public:
 		}
 	}
 	virtual void declareInteger(std::string _name) = 0;
-	virtual Expression newInteger(std::string _name)
+	Expression newInteger(std::string _name)
 	{
 		// Subclasses should do something here
 		declareInteger(_name);
 		return Expression(std::move(_name), {}, Sort::Int);
 	}
 	virtual void declareBool(std::string _name) = 0;
-	virtual Expression newBool(std::string _name)
+	Expression newBool(std::string _name)
 	{
 		// Subclasses should do something here
 		declareBool(_name);

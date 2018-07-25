@@ -33,6 +33,12 @@ namespace solidity
 namespace smt
 {
 
+/**
+ * The SMTPortfolio wraps all available solvers within a single interface,
+ * propagating the functionalities to all solvers.
+ * It also checks whether different solvers give conflicting answers
+ * to SMT queries.
+ */
 class SMTPortfolio: public SolverInterface, public boost::noncopyable
 {
 public:
