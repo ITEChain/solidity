@@ -87,6 +87,32 @@ void SMTPortfolio::addAssertion(Expression const& _expr)
 		s->addAssertion(_expr);
 }
 
+/*
+Broadcasts the SMT query to all solvers and returns a single result.
+This comment explains how this result is decided.
+
+When a solver is queried, there are four possible answers:
+SATISFIABLE, UNSATISFIABLE, UNKNOWN, ERROR.
+We say that a solver _answered_ the query if it returns either
+SATISFIABLE (SAT) or UNSATISFIABLE (UNSAT);
+A solver did not answer the query if it returns either UNKNOWN (it tried
+but couldn't solve it) or ERROR (crash, internal error, API error, etc).
+
+Ideally all solvers answer the query and agree on what the answer is
+(all say SAT or all say UNSAT).
+
+* If at least one solver answers the query, all the non-answer results are ignored.
+	- SAT/UNSAT is preferred over UNKNOWN since it's an actual answer, and over ERROR
+	because one buggy solver/integration shouldn't break the portfolio.
+* If at least one solver answers SAT and at least one answers UNSAT, at least one of them is buggy
+and the result is CONFLICTING.
+	- In the future if we have more than 2 solvers enabled we could go with the majority.
+* If NO solver answers the query:
+	- If at least one solver returned UNKNOWN (where the rest returned ERROR), the result is UNKNOWN.
+	This is preferred over ERROR since the SMTChecker might decide to abstract the query when it is told
+	that this is a hard query to solve.
+	- If all solvers return ERROR, the result is ERROR.
+*/
 pair<CheckResult, vector<string>> SMTPortfolio::check(vector<Expression> const& _expressionsToEvaluate)
 {
 	CheckResult lastResult = CheckResult::ERROR;
@@ -96,14 +122,9 @@ pair<CheckResult, vector<string>> SMTPortfolio::check(vector<Expression> const& 
 		CheckResult result;
 		vector<string> values;
 		tie(result, values) = s->check(_expressionsToEvaluate);
-		if (result == CheckResult::UNKNOWN)
+		if (solverAnswered(result))
 		{
-			if (lastResult == CheckResult::ERROR)
-				lastResult = result;
-		}
-		else
-		{
-			if (lastResult >= CheckResult::UNKNOWN)
+			if (!solverAnswered(lastResult))
 			{
 				lastResult = result;
 				finalValues = std::move(values);
@@ -114,6 +135,14 @@ pair<CheckResult, vector<string>> SMTPortfolio::check(vector<Expression> const& 
 				break;
 			}
 		}
+		else if (result == CheckResult::UNKNOWN && lastResult == CheckResult::ERROR)
+			lastResult = result;
 	}
 	return make_pair(lastResult, finalValues);
+}
+
+bool SMTPortfolio::solverAnswered(CheckResult result)
+{
+	return result == CheckResult::SATISFIABLE
+		|| result == CheckResult::UNSATISFIABLE;
 }

@@ -57,6 +57,8 @@ public:
 	std::pair<CheckResult, std::vector<std::string>> check(std::vector<Expression> const& _expressionsToEvaluate) override;
 
 private:
+	bool solverAnswered(CheckResult result);
+
 	std::vector<std::shared_ptr<smt::SolverInterface>> m_solvers;
 };
 
