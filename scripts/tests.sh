@@ -30,7 +30,10 @@ set -e
 
 REPO_ROOT="$(dirname "$0")"/..
 
+WORKDIR=`mktemp -d`
 IPC_ENABLED=true
+ALETH_PID=
+
 if [[ "$OSTYPE" == "darwin"* ]]
 then
     SMT_FLAGS="--no-smt"
@@ -40,6 +43,19 @@ then
         IPC_FLAGS="--no-ipc"
     fi
 fi
+
+cleanup() {
+	echo "Cleaning up working directory ${WORKDIR} ... "
+	if [[ "$IPC_ENABLED" = true ]] && [[ -n "${ALETH_PID}" ]]
+	then
+		pkill "$ALETH_PID" || true
+		sleep 4
+		pgrep "$ALETH_PID" && pkill -9 "$ALETH_PID" || true
+	fi
+	rm -rf "$WORKDIR"
+}
+trap cleanup INT TERM
+trap -p
 
 if [ "$1" = --junit_report ]
 then
@@ -102,7 +118,7 @@ function download_aleth()
 # echos the PID
 function run_aleth()
 {
-    $ALETH_PATH --test -d "$1" >/dev/null 2>&1 &
+    $ALETH_PATH --test -d "${WORKDIR}" >/dev/null 2>&1 &
     echo $!
     # Wait until the IPC endpoint is available.
     while [ ! -S "$1"/geth.ipc ] ; do sleep 1; done
@@ -121,7 +137,7 @@ if [ "$IPC_ENABLED" = true ];
 then
     download_aleth
     check_aleth
-    ALETH_PID=$(run_aleth /tmp/test)
+    ALETH_PID=$(run_aleth)
 fi
 
 progress="--show-progress"
@@ -164,9 +180,4 @@ then
     exit 1
 fi
 
-if [ "$IPC_ENABLED" = true ]
-then
-    pkill "$ALETH_PID" || true
-    sleep 4
-    pgrep "$ALETH_PID" && pkill -9 "$ALETH_PID" || true
-fi
+cleanup
