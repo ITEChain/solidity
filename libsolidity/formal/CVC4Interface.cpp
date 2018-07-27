@@ -37,6 +37,7 @@ void CVC4Interface::reset()
 	m_functions.clear();
 	m_solver.reset();
 	m_solver.setOption("produce-models", true);
+	m_solver.setTimeLimit(timeout);
 }
 
 void CVC4Interface::push()
@@ -109,7 +110,7 @@ pair<CheckResult, vector<string>> CVC4Interface::check(vector<Expression> const&
 			solAssert(false, "");
 		}
 
-		if (result != CheckResult::UNSATISFIABLE && !_expressionsToEvaluate.empty())
+		if (result == CheckResult::SATISFIABLE && !_expressionsToEvaluate.empty())
 		{
 			for (Expression const& e: _expressionsToEvaluate)
 				values.push_back(toString(m_solver.getValue(toCVC4Expr(e))));
